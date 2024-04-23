@@ -1,0 +1,129 @@
+%%writefile vector_add.cu
+
+#include<iostream>
+#include<cuda_runtime.h>
+using namespace std;
+
+__global__ void add_vectors(int *A, int* B, int *C, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(i < n) {
+      C[i] = A[i] + B[i];
+    }
+}
+
+int main() {
+    int n = 1000000;
+    int size = n * sizeof(int);
+    int *A, *B, *C;
+     int *dev_A, *dev_B, *dev_C;
+
+    cudaMallocHost(&A, size);
+    cudaMallocHost(&B, size);
+    cudaMallocHost(&C, size);
+
+    cudaMalloc(&dev_A, size);
+    cudaMalloc(&dev_B, size);
+    cudaMalloc(&dev_C, size);
+
+
+    for(int i=0; i<n; i++) {
+      A[i] = i;
+      B[i] = i * 2;
+    }
+
+
+    cudaMemcpy(dev_A, A, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_B, B, size, cudaMemcpyHostToDevice);
+
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1)/blockSize;
+    add_vectors<<<numBlocks, blockSize>>>(dev_A, dev_B, dev_C, n);
+
+    cudaMemcpy(C, dev_C, size, cudaMemcpyDeviceToHost);
+
+    for(int i=0; i<n; i++) {
+      cout<<C[i]<<" ";
+    }
+    cout<<endl;
+
+
+    cudaFree(dev_A);
+    cudaFree(dev_B);
+    cudaFree(dev_C);
+    cudaFreeHost(A);
+    cudaFreeHost(B);
+    cudaFreeHost(C);
+
+    return 0;
+}
+
+
+
+// multiply
+
+
+%%writefile mat_multiply.cu
+
+#include<iostream>
+#include<cuda_runtime.h>
+using namespace std;
+
+
+__global__ void multiplyMatrix(int *A, int *B, int *C, int n) {
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int col = blockIdx.x * blockDim.x + threadIdx.x;
+  if(row < n && col < n) {
+    int pValue = 0;
+    for(int k=0; k<n; k++) {
+      pValue += A[row*n + k] * B[k*n + col];
+    }
+    C[row*n + col] = pValue;
+  }
+}
+
+int main() {
+
+  int n = 512;
+  int size = n*n * sizeof(int);
+
+  int *A, *B, *C, *dev_A, *dev_B, *dev_C;
+  cudaMallocHost(&A, size);
+  cudaMallocHost(&B, size);
+  cudaMallocHost(&C, size);
+  cudaMalloc(&dev_A, size);
+  cudaMalloc(&dev_B, size);
+  cudaMalloc(&dev_C, size);
+
+  for(int i=0; i<n; i++) {
+    for(int j=0; j<n; j++) {
+      A[i*n + j] = i * n + j;
+      B[i*n + j] = j*n + j;
+    }
+  }
+
+  cudaMemcpy(dev_A, A, size, cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_B, B, size, cudaMemcpyHostToDevice);
+
+  dim3 dimBlock(16, 16);
+  dim3 dimGrid(n/dimBlock.x, n/dimBlock.y);
+
+  multiplyMatrix<<<dimGrid, dimBlock>>>(dev_A, dev_B, dev_C, n);
+
+  cudaMemcpy(C, dev_C, size, cudaMemcpyDeviceToHost);
+
+  for(int i=0; i<20; i++) {
+    for(int j=0; j < 20; j++) {
+      cout<<i*n+j<<" ";
+    }
+    cout<<endl;
+  }
+
+  cudaFree(dev_A);
+  cudaFree(dev_B);
+  cudaFree(dev_C);
+  cudaFreeHost(A);
+  cudaFreeHost(B);
+  cudaFreeHost(C);
+  return 0;
+}

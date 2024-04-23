@@ -1,0 +1,94 @@
+import pandas as pd
+
+df=pd.read_csv("housing_data (1).csv")
+df
+
+//preprocessing
+df.describe()
+df.shape
+df.info()
+df.isnull().sum()
+df.fillna(df.mean(),inplace=True)
+df.isnull().sum()
+
+//plot
+import seaborn as sns
+
+
+//outlier
+import numpy as np
+def remove_outlier(df,col):
+
+  Q1=df[col].quantile(0.25)
+  Q3=df[col].quantile(0.75)
+  iqr=Q3-Q1
+  lower=Q1-1.5*iqr
+  upper=Q3+1.5*iqr
+  df[col]=np.clip(df[col],lower,upper)
+  return df
+
+def treat_outlier(df,cols):
+  for col in cols:
+      df1=remove_outlier(df,col)
+  return df1
+
+treat_outlier(df,df.iloc[:,0::])
+
+sns.boxplot(df.MEDV)
+
+df['MEDV']
+
+X_data = df.iloc[:,:-1]
+y_data =df['MEDV']
+
+
+//Linear regression
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+
+X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+mse = mean_squared_error(y_test, y_pred)
+print("Mean Squared Error:", mse)
+
+rmse = (np.sqrt(mean_squared_error(y_test, y_pred)))
+print("root Mean Squared Error:", rmse)
+
+
+print("Coefficients:", model.coef_)
+print("Intercept:", model.intercept_)
+
+from sklearn.metrics import r2_score
+r2=r2_score(y_test,y_pred)
+print(r2)
+
+//kears model
+import tensorflow as tf
+from tensorflow import keras
+model = keras.Sequential([
+    keras.layers.Dense(15, input_shape=(13,),activation='relu'),     
+    keras.layers.Dense(13,activation='relu'),
+    keras.layers.Dense(1,activation='relu')                    
+])
+
+model.compile(loss='mean_absolute_error',optimizer='adam',metrics=['mean_absolute_error'])
+
+model.fit(X_train, y_train, epochs=500, batch_size=32, validation_split=0.2)
+
+result = model.evaluate(X_test, y_test)
+result
+
+y_pred = model.predict(X_test)
+
+from sklearn.metrics import r2_score
+
+score = r2_score(y_test, y_pred)
+score
